@@ -1,92 +1,86 @@
 import unittest
-from unittest.mock import patch
-from io import StringIO
 from control_inscripcion import ControlInscripcion
-from inscripcion import Inscripcion
-from estudiante import Estudiante
+from io import StringIO
+from unittest.mock import patch
+import tempfile
+import os
+
 
 class TestControlInscripcion(unittest.TestCase):
 
-    def setUp(self):
-        self.control = ControlInscripcion()
+    def crear_archivo_temporal(self, contenido):
+        temp = tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8', newline='')
+        temp.write(contenido)
+        temp.close()
+        return temp.name
 
-    @patch("sys.stdout", new_callable=StringIO)
-    def test_3_estudiantes_1_materia_cada_uno(self, mock_stdout):
-        """Calcular materias cuando hay 3 estudiantes y 3 materias distintas"""
-        self.control.estudiantes = {
-            "1": Estudiante("1", "Ana"),
-            "2": Estudiante("2", "Luis"),
-            "3": Estudiante("3", "Sofi")
-        }
-        self.control.inscripciones = [
-            Inscripcion("1", "MAT1"),
-            Inscripcion("2", "MAT2"),
-            Inscripcion("3", "MAT3")
-        ]
-        self.control.calcular_materias_por_estudiante()
-        salida = mock_stdout.getvalue().strip().split("\n")
+    def eliminar_archivo(self, ruta):
+        if os.path.exists(ruta):
+            os.remove(ruta)
 
-        self.assertIn("Ana: 1 materias", salida)
-        self.assertIn("Luis: 1 materias", salida)
-        self.assertIn("Sofi: 1 materias", salida)
+    def test_tres_estudiantes_con_materias_diferentes(self):
+        contenido = """1234567,Lulú López,1040,Cálculo
+        9876534,Pepito Pérez,1050,Física
+        4567766,Calvin Clein,1060,Administración"""
+        ruta = self.crear_archivo_temporal(contenido)
+        
+        control = ControlInscripcion()
+        control.leer_archivo(ruta)
 
-    @patch("sys.stdout", new_callable=StringIO)
-    def test_ningun_estudiante_ni_materia(self, mock_stdout):
-        """Calcular materias cuando no se ha subido ningún dato"""
-        self.control.estudiantes = {}
-        self.control.inscripciones = []
-        self.control.calcular_materias_por_estudiante()
-        self.assertEqual(mock_stdout.getvalue().strip(), "")
+        with patch('sys.stdout', new_callable=StringIO) as salida:
+            control.calcular_materias_por_estudiante()
+            resultado = salida.getvalue().strip().split("\n")
+            self.assertIn("Lulú López: 1 materias", resultado)
+            self.assertIn("Pepito Pérez: 1 materias", resultado)
+            self.assertIn("Calvin Clein: 1 materias", resultado)
 
-    @patch("sys.stdout", new_callable=StringIO)
-    def test_un_estudiante_dos_materias(self, mock_stdout):
-        """Un estudiante tiene 2 materias, los otros una"""
-        self.control.estudiantes = {
-            "1": Estudiante("1", "Carlos"),
-            "2": Estudiante("2", "Laura"),
-            "3": Estudiante("3", "Andrés")
-        }
-        self.control.inscripciones = [
-            Inscripcion("1", "MAT1"),
-            Inscripcion("1", "MAT2"),
-            Inscripcion("2", "MAT3"),
-            Inscripcion("3", "MAT4")
-        ]
-        self.control.calcular_materias_por_estudiante()
-        salida = mock_stdout.getvalue().strip().split("\n")
+        self.eliminar_archivo(ruta)
 
-        self.assertIn("Carlos: 2 materias", salida)
-        self.assertIn("Laura: 1 materias", salida)
-        self.assertIn("Andrés: 1 materias", salida)
+    def test_archivo_vacio(self):
+        ruta = self.crear_archivo_temporal("")
+        control = ControlInscripcion()
+        control.leer_archivo(ruta)
 
-    @patch("sys.stdout", new_callable=StringIO)
-    def test_mismo_nombre_distinta_cedula(self, mock_stdout):
-        """Dos estudiantes con el mismo nombre pero diferente cédula"""
-        self.control.estudiantes = {
-            "10": Estudiante("10", "Alex"),
-            "20": Estudiante("20", "Alex")
-        }
-        self.control.inscripciones = [
-            Inscripcion("10", "MAT1"),
-            Inscripcion("20", "MAT2")
-        ]
-        self.control.calcular_materias_por_estudiante()
-        salida = mock_stdout.getvalue().strip().split("\n")
+        with patch('sys.stdout', new_callable=StringIO) as salida:
+            control.calcular_materias_por_estudiante()
+            self.assertEqual(salida.getvalue().strip(), "")
 
-        self.assertEqual(sorted(salida), sorted(["Alex: 1 materias", "Alex: 1 materias"]))
+        self.eliminar_archivo(ruta)
 
-    def test_misma_cedula_diferente_nombre(self):
-        """Dos inscripciones con misma cédula pero diferente nombre deben lanzar excepción"""
-        self.control.estudiantes = {
-            "99": Estudiante("99", "Pedro")
-        }
-        # Simulamos conflicto de cédula con otro nombre
-        with self.assertRaises(ValueError):
-            nuevo_nombre = "Juan"
-            cedula = "99"
-            if self.control.estudiantes[cedula].get_nombre_estudiante() != nuevo_nombre:
-                raise ValueError(f"Conflicto de nombres para cédula {cedula}")
+    def test_un_estudiante_con_dos_materias(self):
+        contenido = """1234567,Lulú López,1040,Cálculo
+        9876534,Pepito Pérez,1050,Física
+        1234567,Lulú López,1060,Administración"""
+        ruta = self.crear_archivo_temporal(contenido)
 
+        control = ControlInscripcion()
+        control.leer_archivo(ruta)
 
-if __name__ == "_main_":
+        with patch('sys.stdout', new_callable=StringIO) as salida:
+            control.calcular_materias_por_estudiante()
+            resultado = salida.getvalue().strip().split("\n")
+            self.assertIn("Lulú López: 2 materias", resultado)
+            self.assertIn("Pepito Pérez: 1 materias", resultado)
+
+        self.eliminar_archivo(ruta)
+
+    def test_dos_estudiantes_mismo_nombre_diferente_cedula(self):
+        contenido = """1234567,Alex Martínez,1040,Cálculo
+        9876534,Alex Martínez,1050,Física"""
+        ruta = self.crear_archivo_temporal(contenido)
+
+        control = ControlInscripcion()
+        control.leer_archivo(ruta)
+
+        with patch('sys.stdout', new_callable=StringIO) as salida:
+            control.calcular_materias_por_estudiante()
+            resultado = salida.getvalue().strip().split("\n")
+            self.assertEqual(sorted(resultado), sorted([
+                "Alex Martínez: 1 materias",
+                "Alex Martínez: 1 materias"
+            ]))
+
+        self.eliminar_archivo(ruta)
+
+if __name__ == '__main__':
     unittest.main()
