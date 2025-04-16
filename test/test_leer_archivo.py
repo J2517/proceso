@@ -22,12 +22,18 @@ class TestLeerArchivo(unittest.TestCase):
         with self.assertRaises(ValueError):
             control.leer_archivo(ruta)
 
+        self.assertEqual(len(control.estudiantes), 0)
+        self.assertEqual(len(control.inscripciones), 0)
+
     def test_archivo_json(self):
         ruta = os.path.join(self.ruta_base, "archivo.json")
         control = ControlInscripcion()
 
         with self.assertRaises(Exception):  # Puede ser csv.Error u otra
             control.leer_archivo(ruta)
+
+        self.assertEqual(len(control.estudiantes), 0)
+        self.assertEqual(len(control.inscripciones), 0)
 
     def test_archivo_vacio(self):
         ruta = os.path.join(self.ruta_base, "vacio.csv")
@@ -41,8 +47,9 @@ class TestLeerArchivo(unittest.TestCase):
         ruta = os.path.join(self.ruta_base, "linea_invalida.csv")
         control = ControlInscripcion()
 
-        with self.assertRaises(ValueError):
-            control.leer_archivo(ruta)
+        control.leer_archivo(ruta)
+        self.assertEqual(len(control.estudiantes), 3)
+        self.assertEqual(len(control.inscripciones), 4)
 
     def test_lineas_duplicadas(self):
         ruta = os.path.join(self.ruta_base, "duplicadas.csv")
@@ -56,8 +63,10 @@ class TestLeerArchivo(unittest.TestCase):
         ruta = os.path.join(self.ruta_base, "campos_vacios.csv")
         control = ControlInscripcion()
 
-        with self.assertRaises(ValueError):
-            control.leer_archivo(ruta)
+        control.leer_archivo(ruta)
+        
+        self.assertEqual(len(control.estudiantes), 2)
+        self.assertEqual(len(control.inscripciones), 3)
 
     def test_estudiante_con_dos_materias(self):
         ruta = os.path.join(self.ruta_base, "dos_materias.csv")
@@ -66,6 +75,17 @@ class TestLeerArchivo(unittest.TestCase):
         control.leer_archivo(ruta)
         self.assertEqual(len(control.estudiantes), 2)
         self.assertEqual(len(control.inscripciones), 3)
+
+    def test_estudiantes_con_cedula_duplicada(self):
+        ruta = os.path.join(self.ruta_base, "cedula_duplicada.csv")
+        control = ControlInscripcion()
+
+        with self.assertRaises(ValueError):
+            control.leer_archivo(ruta)
+
+        self.assertEqual(len(control.estudiantes), 0)
+        self.assertEqual(len(control.inscripciones), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
