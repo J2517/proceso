@@ -8,13 +8,15 @@ import os
 
 class TestControlInscripcion(unittest.TestCase):
 
-    def crear_archivo_temporal(self, contenido):
+    @staticmethod
+    def crear_archivo_temporal(contenido):
         temp = tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8', newline='')
         temp.write(contenido)
         temp.close()
         return temp.name
 
-    def eliminar_archivo(self, ruta):
+    @staticmethod
+    def eliminar_archivo(ruta):
         if os.path.exists(ruta):
             os.remove(ruta)
 
